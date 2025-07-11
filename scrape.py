@@ -87,7 +87,50 @@ def ask_llm(menu_data):
     print(response.content[0].text.strip())
     return response.content[0].text.strip()
 
-def send_email(recommendations):
+def format_full_menu(menu_data):
+    """Format the complete menu organized by location and station"""
+    # Group menu items by URL and then by station
+    locations = {}
+    
+    # Map URLs to friendly names
+    url_names = {
+        "https://amazonlab126.cafebonappetit.com/cafe/sjc31-cafe/": "SJC31 Cafe",
+        "https://amazonlab126.cafebonappetit.com/cafe/midway-cafe-sjc-32/": "Midway Cafe (SJC-32)",
+        "https://amazonlab126.cafebonappetit.com/cafe/lab-luxe/": "Lab Luxe",
+        "https://amazonlab126.cafebonappetit.com/cafe/lab-126-cafe/": "Lab 126 Cafe"
+    }
+    
+    for item in menu_data:
+        url = item['url']
+        station = item['station']
+        
+        if url not in locations:
+            locations[url] = {}
+        if station not in locations[url]:
+            locations[url][station] = []
+            
+        locations[url][station].append(item)
+    
+    # Build formatted menu text
+    menu_text = "\n## 📋 Complete Menu\n\n"
+    
+    for url, stations in locations.items():
+        location_name = url_names.get(url, url)
+        menu_text += f"### 🏢 {location_name}\n"
+        
+        for station_name, items in stations.items():
+            menu_text += f"\n**{station_name}:**\n"
+            for item in items:
+                menu_text += f"• {item['dish']} - {item['price']}\n"
+                if item['description']:
+                    menu_text += f"  _{item['description']}_\n"
+            menu_text += "\n"
+        
+        menu_text += "---\n\n"
+    
+    return menu_text
+
+def send_email(recommendations, full_menu):
     """Send the menu recommendations via email"""
     
     # Email configuration from environment variables
@@ -116,6 +159,9 @@ def send_email(recommendations):
         <div style="white-space: pre-wrap; font-family: Arial, sans-serif; line-height: 1.6;">
 {recommendations}
         </div>
+        <div style="white-space: pre-wrap; font-family: Arial, sans-serif; line-height: 1.6; margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px;">
+{full_menu}
+        </div>
         <hr>
         <p><small>Generated automatically from Amazon Lab 126 cafeterias</small></p>
       </body>
@@ -128,6 +174,8 @@ Daily Menu Recommendations for Cutting
 Date: {dt.date.today().strftime('%A, %B %d, %Y')}
 
 {recommendations}
+
+{full_menu}
 
 ---
 Generated automatically from Amazon Lab 126 cafeterias
@@ -166,8 +214,11 @@ if __name__ == "__main__":
         print(f"✅ Found {len(raw_menu)} menu items")
         recs = ask_llm(raw_menu)
         
-        # Send email with recommendations
-        email_sent = send_email(recs)
+        # Format the complete menu
+        full_menu = format_full_menu(raw_menu)
+        
+        # Send email with recommendations and full menu
+        email_sent = send_email(recs, full_menu)
         
         if email_sent:
             print("🎉 Menu recommendations sent successfully!")
