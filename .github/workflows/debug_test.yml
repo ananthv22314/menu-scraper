@@ -1,0 +1,47 @@
+name: Debug Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Test secrets
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+      run: |
+        echo "Testing secrets..."
+        if [ -z "$ANTHROPIC_API_KEY" ]; then
+          echo "❌ ANTHROPIC_API_KEY is missing"
+        else
+          echo "✅ ANTHROPIC_API_KEY is set (length: ${#ANTHROPIC_API_KEY})"
+        fi
+        
+        if [ -z "$SENDER_EMAIL" ]; then
+          echo "❌ SENDER_EMAIL is missing"
+        else
+          echo "✅ SENDER_EMAIL is set: $SENDER_EMAIL"
+        fi
+    
+    - name: Test Python and dependencies
+      run: |
+        python --version
+        python -c "print('Python works!')"
+        
+    - name: List files
+      run: |
+        echo "Repository contents:"
+        ls -la
+        echo "Requirements file:"
+        cat requirements.txt 
